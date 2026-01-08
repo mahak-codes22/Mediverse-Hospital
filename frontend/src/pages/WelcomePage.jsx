@@ -12,7 +12,7 @@ import 'swiper/css/pagination';
 const WelcomePage = () => {
   const navigate = useNavigate();
 
-  // Function for smooth scrolling
+  // Smooth Scroll Function
   const scrollToSection = (id) => {
     const element = document.getElementById(id);
     if (element) {
@@ -30,7 +30,7 @@ const WelcomePage = () => {
   return (
     <div className="min-h-screen bg-white font-sans text-slate-900">
       
-      {/* --- FIXED NAVBAR --- */}
+      {/* --- NAVBAR --- */}
       <nav className="fixed top-0 w-full bg-white/90 backdrop-blur-md border-b z-[100] px-6 py-4 flex justify-between items-center">
         <div className="flex items-center gap-2 cursor-pointer" onClick={() => window.scrollTo({top:0, behavior:'smooth'})}>
           <Activity className="text-blue-600" size={28} />
@@ -45,9 +45,9 @@ const WelcomePage = () => {
           ))}
         </div>
 
-        {/* 🟢 ACTION: Ye button aapke Landing Page par le jayega */}
+        {/* Existing Button linked to YOUR page */}
         <button onClick={() => navigate('/home')} className="bg-blue-600 text-white px-6 py-2 rounded-xl font-bold hover:bg-slate-900 transition-all shadow-lg shadow-blue-100">
-          Login / Enter Portal
+          Login Portal
         </button>
       </nav>
 
@@ -62,7 +62,7 @@ const WelcomePage = () => {
               We provide the highest quality medical services with state-of-the-art technology and compassionate care.
             </p>
             <div className="flex flex-wrap gap-4">
-              {/* 🟢 ACTION: Ye button bhi aapke Landing Page par le jayega */}
+              {/* Existing Button linked to YOUR page */}
               <button onClick={() => navigate('/home')} className="bg-blue-600 text-white px-8 py-4 rounded-2xl font-black flex items-center gap-2 hover:shadow-2xl transition-all">
                 Get Started <ChevronRight />
               </button>
@@ -93,7 +93,7 @@ const WelcomePage = () => {
               <h3 className="text-blue-600 font-black uppercase tracking-widest text-sm mb-4">About Our Hospital</h3>
               <h2 className="text-4xl font-black mb-6 leading-tight">Leading the Way in Medical Excellence</h2>
               <p className="text-slate-600 text-lg mb-8 leading-relaxed">
-                MediVerse is dedicated to providing comprehensive healthcare solutions. Our facility integrates advanced diagnostics, expert surgical teams, and digital record management to ensure your health is managed perfectly.
+                MediVerse is dedicated to providing comprehensive healthcare solutions. Our facility integrates advanced diagnostics, expert surgical teams, and digital record management.
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
                 {['Emergency Care 24/7', 'Certified Specialists', 'Modern Technology', 'Digital Health Lab'].map(item => (
@@ -145,6 +145,7 @@ const WelcomePage = () => {
           >
             {doctors.map((dr, i) => (
               <SwiperSlide key={i}>
+                {/* Clicking Doctor card also goes to YOUR page */}
                 <div onClick={() => navigate('/home')} className="bg-slate-800 rounded-3xl overflow-hidden cursor-pointer group hover:bg-blue-600 transition-all duration-500">
                   <img src={dr.img} className="w-full h-64 object-cover grayscale group-hover:grayscale-0 transition-all" alt={dr.name} />
                   <div className="p-6 text-center">
@@ -173,7 +174,7 @@ const WelcomePage = () => {
               <ul className="space-y-4 mb-10">
                 {p.feat.map(f => <li key={f} className="flex items-center gap-2 font-bold opacity-90"><CheckCircle2 size={18}/> {f}</li>)}
               </ul>
-              {/* 🟢 ACTION: Ye button bhi aapke Landing Page par le jayega */}
+              {/* Existing Button linked to YOUR page */}
               <button onClick={() => navigate('/home')} className={`w-full py-4 rounded-xl font-black transition-all ${p.active ? 'bg-white text-blue-600 hover:bg-slate-100' : 'bg-slate-900 text-white hover:bg-blue-600'}`}>
                 Book Package
               </button>
