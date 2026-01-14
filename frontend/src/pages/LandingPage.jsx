@@ -1,16 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import API from '../api'; 
+// 👇 1. Firebase Imports Add kiye
+import { auth } from '../firebase';
+import { onAuthStateChanged, signOut } from "firebase/auth";
+
 import { 
   Activity, Search, FlaskConical, CalendarCheck, 
   Bed, Droplet, User, Stethoscope, Clock, ShieldCheck, 
-  Menu, X, ChevronRight, AlertCircle
+  Menu, X, ChevronRight, AlertCircle, CheckCircle2, LogOut 
 } from 'lucide-react';
 
 const LandingPage = () => {
   const navigate = useNavigate();
 
-  // --- STATES & LOGIC (SAME AS BEFORE) ---
+  // --- STATES & LOGIC ---
+  const [user, setUser] = useState(null); // 👤 User State
   const [doctorsList, setDoctorsList] = useState([]);
   const [beds, setBeds] = useState([]);
   const [blood, setBlood] = useState([]);
@@ -29,8 +34,20 @@ const LandingPage = () => {
   const [myAppointments, setMyAppointments] = useState(null);
   const [myTests, setMyTests] = useState(null);
 
-  // Fetch Live Data
+  // 🔄 2. Check Login Status Live
   useEffect(() => {
+    // Firebase Listener: Jaise hi login/logout hoga, ye chalega
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      
+      // Smart Feature: Agar user login hai, to form me naam apne aap bhar do!
+      if (currentUser) {
+        setBooking(prev => ({ ...prev, patientName: currentUser.displayName }));
+        setLabForm(prev => ({ ...prev, patientName: currentUser.displayName }));
+      }
+    });
+
+    // Data Fetching
     const fetchData = async () => {
       try {
         const docRes = await API.get('/doctors');
@@ -41,7 +58,28 @@ const LandingPage = () => {
       } catch (error) { console.error("Error connecting to backend"); }
     };
     fetchData();
+
+    return () => unsubscribe(); // Cleanup
   }, []);
+
+  // 🔒 3. Protection Logic (Compulsory Login)
+  const requireLogin = (actionCallback) => {
+    if (user) {
+      actionCallback(); // Agar login hai, to modal kholo
+    } else {
+      // Agar login nahi hai, to alert aur redirect
+      if(window.confirm("🔒 You must Login to book an appointment. Go to Login Page?")) {
+        navigate('/patient-login');
+      }
+    }
+  };
+
+  // Logout Function
+  const handleLogout = async () => {
+    await signOut(auth);
+    alert("Logged Out Successfully");
+    setUser(null);
+  };
 
   // Handlers
   const handleBooking = async (e) => {
@@ -63,7 +101,7 @@ const LandingPage = () => {
     setShowStatusModal(true);
   };
 
-  // --- ✨ NEW BEAUTIFUL UI STARTS HERE ---
+  // --- UI STARTS HERE ---
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900 selection:bg-blue-100">
       
@@ -77,11 +115,44 @@ const LandingPage = () => {
             <h1 className="text-2xl font-black text-slate-800 tracking-tight">MediVerse<span className="text-blue-600">.</span></h1>
           </div>
 
-          <div className="hidden md:flex gap-4">
+          <div className="hidden md:flex gap-4 items-center">
+            
+            {/* 👤 Login/Logout Logic in Navbar */}
+            {user ? (
+              <div className="flex items-center gap-3 mr-2 bg-blue-50 px-4 py-2 rounded-xl border border-blue-100">
+                <img src={user.photoURL || "https://ui-avatars.com/api/?name=" + user.displayName} className="w-8 h-8 rounded-full border border-blue-200" alt="User"/>
+                <span className="font-bold text-blue-900 text-sm">Hi, {user.displayName.split(' ')[0]}</span>
+                <button onClick={handleLogout} className="bg-white p-1.5 rounded-lg text-red-500 hover:bg-red-50" title="Logout">
+                  <LogOut size={16}/>
+                </button>
+              </div>
+            ) : (
+              <button 
+                onClick={() => navigate('/patient-login')} 
+                className="px-5 py-2.5 font-bold text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all border border-slate-200"
+              >
+                Patient Login
+              </button>
+            )}
+
             <button onClick={() => navigate('/login')} className="px-5 py-2.5 font-bold text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all">Staff Login</button>
+            
+            {/* 🔒 Protected Buttons */}
             <button onClick={() => setShowStatusModal(true)} className="px-5 py-2.5 font-bold text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all flex items-center gap-2"><Search size={18}/> Check Status</button>
-            <button onClick={() => setShowLabModal(true)} className="px-5 py-2.5 bg-purple-100 text-purple-700 font-bold rounded-xl hover:bg-purple-200 transition-all flex items-center gap-2"><FlaskConical size={18}/> Book Test</button>
-            <button onClick={() => setShowBookingModal(true)} className="px-5 py-2.5 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-200 transition-all flex items-center gap-2"><CalendarCheck size={18}/> Book Appointment</button>
+            
+            <button 
+              onClick={() => requireLogin(() => setShowLabModal(true))} 
+              className="px-5 py-2.5 bg-purple-100 text-purple-700 font-bold rounded-xl hover:bg-purple-200 transition-all flex items-center gap-2"
+            >
+              <FlaskConical size={18}/> Book Test
+            </button>
+            
+            <button 
+              onClick={() => requireLogin(() => setShowBookingModal(true))} 
+              className="px-5 py-2.5 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-200 transition-all flex items-center gap-2"
+            >
+              <CalendarCheck size={18}/> Book Appointment
+            </button>
           </div>
         </div>
       </nav>
@@ -100,7 +171,11 @@ const LandingPage = () => {
         {/* Quick Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto">
           {[
-            { label: "Doctors Live", val: doctorsList.filter(d => d.availability === "Available").length, icon: User, color: "text-green-600", bg: "bg-green-100" },
+            { 
+              label: "Doctors Live", 
+              val: doctorsList.filter(d => (d.availability || d.status || "").toLowerCase() === "available").length, 
+              icon: User, color: "text-green-600", bg: "bg-green-100" 
+            },
             { label: "Beds Free", val: beds.reduce((acc, i) => acc + i.quantity, 0), icon: Bed, color: "text-blue-600", bg: "bg-blue-100" },
             { label: "Blood Units", val: blood.reduce((acc, i) => acc + i.quantity, 0), icon: Droplet, color: "text-red-600", bg: "bg-red-100" },
             { label: "Lab Open", val: "24/7", icon: Clock, color: "text-purple-600", bg: "bg-purple-100" },
@@ -126,34 +201,40 @@ const LandingPage = () => {
               <h2 className="text-xl font-black text-slate-800 flex items-center gap-2"><Stethoscope className="text-blue-600"/> Doctor Availability</h2>
               <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 animate-pulse">● Live Updates</span>
             </div>
+            
             <div className="divide-y divide-slate-50 max-h-[500px] overflow-y-auto">
               {doctorsList.length === 0 ? (
                  <div className="p-8 text-center text-slate-400">Loading doctors...</div>
               ) : (
-                doctorsList.map((doc) => (
-                  <div key={doc._id} className="p-6 flex items-center justify-between hover:bg-slate-50 transition-colors group">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center text-slate-400 font-bold text-lg group-hover:bg-blue-100 group-hover:text-blue-600 transition-colors">
-                        {doc.name[0]}
+                doctorsList.map((doc) => {
+                  const rawStatus = doc.availability || doc.status || "Unavailable";
+                  const isAvailable = rawStatus.toString().toLowerCase() === "available";
+
+                  return (
+                    <div key={doc._id} className="p-6 flex items-center justify-between hover:bg-slate-50 transition-colors group">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center text-slate-400 font-bold text-lg group-hover:bg-blue-100 group-hover:text-blue-600 transition-colors">
+                          {doc.name ? doc.name[0] : "D"}
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-slate-800 text-lg">Dr. {doc.name}</h3>
+                          <p className="text-slate-500 text-sm font-medium">{doc.specialty}</p>
+                        </div>
                       </div>
                       <div>
-                        <h3 className="font-bold text-slate-800 text-lg">Dr. {doc.name}</h3>
-                        <p className="text-slate-500 text-sm font-medium">{doc.specialty}</p>
+                        {isAvailable ? (
+                          <span className="bg-green-100 text-green-700 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2">
+                            <CheckCircle2 size={16}/> Available
+                          </span>
+                        ) : (
+                          <span className="bg-red-100 text-red-700 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2">
+                            <Clock size={16}/> {rawStatus}
+                          </span>
+                        )}
                       </div>
                     </div>
-                    <div>
-                      {doc.availability === 'Available' ? (
-                        <span className="bg-green-100 text-green-700 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2">
-                          <CheckCircle2 size={16}/> Available
-                        </span>
-                      ) : (
-                        <span className="bg-red-100 text-red-700 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2">
-                          <Clock size={16}/> {doc.availability}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           </div>
@@ -167,7 +248,12 @@ const LandingPage = () => {
               <h3 className="text-blue-100 font-bold mb-1 uppercase tracking-widest text-sm">Real-time Status</h3>
               <div className="text-6xl font-black mb-2">{beds.reduce((acc, i) => acc + i.quantity, 0)}</div>
               <p className="text-xl font-bold mb-6">General Beds Available</p>
-              <button onClick={() => setShowBookingModal(true)} className="w-full bg-white text-blue-700 font-bold py-3 rounded-xl hover:bg-blue-50 transition-colors">
+              
+              {/* 🔒 Protected Button */}
+              <button 
+                onClick={() => requireLogin(() => setShowBookingModal(true))} 
+                className="w-full bg-white text-blue-700 font-bold py-3 rounded-xl hover:bg-blue-50 transition-colors"
+              >
                 Book Bed / Appointment
               </button>
             </div>
@@ -198,8 +284,8 @@ const LandingPage = () => {
             <button onClick={() => setShowBookingModal(false)} className="absolute top-4 right-4 bg-slate-100 p-2 rounded-full hover:bg-slate-200"><X size={20}/></button>
             <h2 className="text-2xl font-black text-slate-800 mb-6 flex items-center gap-2"><CalendarCheck className="text-blue-600"/> Book Appointment</h2>
             <form onSubmit={handleBooking} className="space-y-4">
-              <input required placeholder="Patient Name" className="w-full p-4 bg-slate-50 rounded-xl font-bold outline-none focus:ring-2 focus:ring-blue-500" onChange={e => setBooking({...booking, patientName: e.target.value})} />
-              <input required placeholder="Mobile Number" className="w-full p-4 bg-slate-50 rounded-xl font-bold outline-none focus:ring-2 focus:ring-blue-500" onChange={e => setBooking({...booking, mobile: e.target.value})} />
+              <input required placeholder="Patient Name" value={booking.patientName} className="w-full p-4 bg-slate-50 rounded-xl font-bold outline-none focus:ring-2 focus:ring-blue-500" onChange={e => setBooking({...booking, patientName: e.target.value})} />
+              <input required placeholder="Mobile Number" value={booking.mobile} className="w-full p-4 bg-slate-50 rounded-xl font-bold outline-none focus:ring-2 focus:ring-blue-500" onChange={e => setBooking({...booking, mobile: e.target.value})} />
               <select className="w-full p-4 bg-slate-50 rounded-xl font-bold outline-none focus:ring-2 focus:ring-blue-500" onChange={e => setBooking({...booking, doctorName: e.target.value})}>
                 <option value="">Select Doctor</option>
                 {doctorsList.map(doc => <option key={doc._id} value={doc.name}>{doc.name} ({doc.specialty})</option>)}
@@ -266,8 +352,8 @@ const LandingPage = () => {
             <button onClick={() => setShowLabModal(false)} className="absolute top-4 right-4 bg-slate-100 p-2 rounded-full hover:bg-slate-200"><X size={20}/></button>
             <h2 className="text-2xl font-black text-purple-600 mb-6 flex items-center gap-2"><FlaskConical/> Book Lab Test</h2>
             <form onSubmit={handleLabBooking} className="space-y-4">
-              <input required placeholder="Patient Name" className="w-full p-4 bg-slate-50 rounded-xl font-bold outline-none focus:ring-2 focus:ring-purple-500" onChange={e => setLabForm({...labForm, patientName: e.target.value})} />
-              <input required placeholder="Mobile Number" className="w-full p-4 bg-slate-50 rounded-xl font-bold outline-none focus:ring-2 focus:ring-purple-500" onChange={e => setLabForm({...labForm, mobile: e.target.value})} />
+              <input required placeholder="Patient Name" value={labForm.patientName} className="w-full p-4 bg-slate-50 rounded-xl font-bold outline-none focus:ring-2 focus:ring-purple-500" onChange={e => setLabForm({...labForm, patientName: e.target.value})} />
+              <input required placeholder="Mobile Number" value={labForm.mobile} className="w-full p-4 bg-slate-50 rounded-xl font-bold outline-none focus:ring-2 focus:ring-purple-500" onChange={e => setLabForm({...labForm, mobile: e.target.value})} />
               <select className="w-full p-4 bg-slate-50 rounded-xl font-bold outline-none focus:ring-2 focus:ring-purple-500" onChange={e => setLabForm({...labForm, testType: e.target.value})}>
                 <option>Blood Test (CBC)</option><option>X-Ray</option><option>MRI Scan</option><option>Sugar Test</option>
               </select>

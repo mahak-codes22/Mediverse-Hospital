@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const Doctor = require('../models/Doctor');
+const Doctor = require('../models/Doctor'); // Path check kar lena
 
 // 1. Get All Doctors
 router.get('/', async (req, res) => {
@@ -12,11 +12,23 @@ router.get('/', async (req, res) => {
   }
 });
 
-// 2. Add New Doctor
+// 2. Add New Doctor (Updated to include 'availability')
 router.post('/add', async (req, res) => {
-  const { name, specialty, mobile, status } = req.body;
+  // Frontend se 'availability' bhi aa sakta hai ya 'status'
+  const { name, specialty, mobile, status, availability } = req.body;
+  
+  // Jo bhi value aayi ho, use final status maan lenge
+  const finalStatus = availability || status || "Available";
+
   try {
-    const newDoctor = new Doctor({ name, specialty, mobile, status });
+    const newDoctor = new Doctor({ 
+      name, 
+      specialty, 
+      mobile, 
+      status: finalStatus,        // Dono jagah same value save karenge
+      availability: finalStatus 
+    });
+    
     await newDoctor.save();
     res.status(201).json(newDoctor);
   } catch (err) {
@@ -24,17 +36,29 @@ router.post('/add', async (req, res) => {
   }
 });
 
-// 3. Update Doctor Status (The Toggle Feature)
+// 3. Update Doctor Status (THE MAIN FIX 🛠️)
 router.put('/:id/status', async (req, res) => {
-  const { status } = req.body;
   try {
+    // Check karein ki Frontend ne 'availability' bheja hai ya 'status'
+    // Hum dono ko accept karenge taaki error na aaye
+    const newStatus = req.body.availability || req.body.status;
+
     const doctor = await Doctor.findByIdAndUpdate(
       req.params.id, 
-      { status: status }, 
+      { 
+        status: newStatus,       // Status column update
+        availability: newStatus  // Availability column update (Sync)
+      }, 
       { new: true } // Return the updated document
     );
+
+    if (!doctor) {
+        return res.status(404).json({ message: "Doctor not found" });
+    }
+
     res.json(doctor);
   } catch (err) {
+    console.error(err); // Server console me error print karega
     res.status(400).json({ message: err.message });
   }
 });

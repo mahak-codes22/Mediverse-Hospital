@@ -8,6 +8,7 @@ import Appointments from './pages/Appointments';
 import Doctors from './pages/Doctors';
 import Inventory from './pages/Inventory';
 import LabTests from './pages/LabTests';
+import PatientLogin from './pages/PatientLogin';
 
 function App() {
   return (
@@ -27,6 +28,7 @@ function App() {
         <Route path="/doctors" element={<Doctors />} />
         <Route path="/inventory" element={<Inventory />} />
         <Route path="/lab-tests" element={<LabTests />} />
+        <Route path="/patient-login" element={<PatientLogin />} />
       </Routes>
     </BrowserRouter>
   );
